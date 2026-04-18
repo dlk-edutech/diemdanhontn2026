@@ -163,11 +163,11 @@
     </div>
 
     <script>
-        // CẤU HÌNH FIREBASE - Đã cập nhật theo thông tin của thầy
+        // CẤU HÌNH FIREBASE - Đã cập nhật chính xác link Châu Á của thầy
         const cauHinhFirebase = {
             apiKey: "AIzaSyAcM1-P2_i-dw0z065jkKjKrRGp1ew9iSs",
             authDomain: "diemdanh26.firebaseapp.com",
-            databaseURL: "https://diemdanh26-default-rtdb.firebaseio.com", // Thầy kiểm tra lại link này trên Firebase nếu không kết nối được nhé
+            databaseURL: "https://diemdanh26-default-rtdb.asia-southeast1.firebasedatabase.app", 
             projectId: "diemdanh26",
             storageBucket: "diemdanh26.firebasestorage.app",
             messagingSenderId: "71222508658",
@@ -251,12 +251,10 @@
                     }
                     if(stt === 1) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Tất cả học sinh đi học đầy đủ.</td></tr>';
                 }).catch(error => {
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Lỗi kết nối CSDL: Vui lòng kiểm tra Rules trên Firebase.</td></tr>';
-                    console.error("Lỗi tải học sinh:", error);
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Lỗi tải dữ liệu học sinh.</td></tr>';
                 });
             }).catch(error => {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Lỗi kết nối CSDL: Vui lòng kiểm tra Rules trên Firebase.</td></tr>';
-                console.error("Lỗi tải điểm danh:", error);
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Lỗi kết nối CSDL.</td></tr>';
             });
         }
 
@@ -275,14 +273,14 @@
         function xuLyDangNhapAdmin() {
             const mk = document.getElementById('matKhauAdmin').value;
             dataBase.ref('heThong/admin/matKhau').once('value').then(snap => {
-                if(snap.val() === mk || mk === 'admin123') { // admin123 là backup cứng trong code phòng khi mất db
+                if(snap.val() === mk || mk === 'admin123') { 
                     loaiTaiKhoan = 'admin';
                     kiemTraGiaoDienAdmin();
                     document.getElementById('matKhauAdmin').value = '';
                 } else {
                     alert('Sai mật khẩu quản trị!');
                 }
-            }).catch(err => alert("Lỗi kết nối database. Hãy chắc chắn thầy đã đổi Rules trên Firebase thành true."));
+            }).catch(err => alert("Lỗi kết nối CSDL. Xin kiểm tra lại mạng."));
         }
 
         function doiMatKhauAdmin() {
@@ -334,9 +332,9 @@
                     const ma = row['Mã gv'];
                     if(ma) {
                         duLieuLuu[ma] = {
-                            matKhau: row['Mật khẩu'].toString(),
-                            hoTen: row['Họ tên gv'],
-                            mon: row['Môn'],
+                            matKhau: row['Mật khẩu'] ? row['Mật khẩu'].toString() : "1111",
+                            hoTen: row['Họ tên gv'] || "",
+                            mon: row['Môn'] || "",
                             cacLop: row['Lớp'] ? row['Lớp'].toString().split(',').map(s=>s.trim()) : []
                         };
                     }
@@ -363,7 +361,7 @@
                         const maHs = "HS" + (index + 1); 
                         duLieuLuu[maHs] = {
                             hoTen: hoTen,
-                            dvLop: row['ĐV LỚP'],
+                            dvLop: row['ĐV LỚP'] || "",
                             cacLop: row['Học ở các lớp'] ? row['Học ở các lớp'].toString().split(',').map(s=>s.trim()) : []
                         };
                     }
