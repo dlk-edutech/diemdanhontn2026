@@ -33,6 +33,9 @@
         .action-btns { float: right; display: flex; gap: 10px; }
         .checkbox-cell { text-align: center; }
         input[type="checkbox"] { transform: scale(1.3); cursor: pointer; }
+        
+        /* CSS cho thanh lọc dữ liệu */
+        .filter-row input, .filter-row select { width: 100%; padding: 5px; box-sizing: border-box; font-weight: normal; border: 1px solid #ccc; border-radius: 3px; }
     </style>
 </head>
 <body>
@@ -59,10 +62,24 @@
             <table id="bangVangKhach">
                 <thead>
                     <tr>
-                        <th>STT</th>
+                        <th style="width: 50px;">STT</th>
                         <th>Họ Tên Học Sinh</th>
-                        <th>ĐV Lớp</th> <th>Lớp Đang Học</th>
+                        <th>ĐV Lớp</th>
+                        <th>Lớp Đang Học</th>
                         <th>Tình Trạng</th>
+                    </tr>
+                    <tr class="filter-row" style="background-color: #e9ecef;">
+                        <th></th>
+                        <th><input type="text" id="locTenKhach" onkeyup="locDuLieuKhach()" placeholder="Lọc tên..."></th>
+                        <th><input type="text" id="locDVLopKhach" onkeyup="locDuLieuKhach()" placeholder="Lọc ĐV Lớp..."></th>
+                        <th><input type="text" id="locLopHocKhach" onkeyup="locDuLieuKhach()" placeholder="Lọc lớp học..."></th>
+                        <th>
+                            <select id="locTinhTrangKhach" onchange="locDuLieuKhach()">
+                                <option value="">Tất cả</option>
+                                <option value="Vắng không phép">Vắng không phép</option>
+                                <option value="Vắng có phép">Vắng có phép</option>
+                            </select>
+                        </th>
                     </tr>
                 </thead>
                 <tbody id="duLieuVangKhach"></tbody>
@@ -144,7 +161,7 @@
                 <table id="bangDiemDanh">
                     <thead>
                         <tr>
-                            <th>STT</th>
+                            <th style="width: 50px;">STT</th>
                             <th>Họ Tên Học Sinh</th>
                             <th>ĐV Lớp</th>
                             <th class="checkbox-cell">Vắng</th>
@@ -223,34 +240,74 @@
                     tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Không có dữ liệu điểm danh vắng ngày này.</td></tr>';
                     return;
                 }
-                let stt = 1;
                 const duLieuNgay = snap.val();
                 
                 dataBase.ref('hocSinh').once('value').then(hsSnap => {
                     const danhSachHS = hsSnap.val() || {};
+                    let coHocSinhVang = false;
                     for(let maLop in duLieuNgay) {
                         for(let maHs in duLieuNgay[maLop]) {
                             const trangThai = duLieuNgay[maLop][maHs];
                             if(trangThai === 'vang' || trangThai === 'vang_phep') {
+                                coHocSinhVang = true;
                                 const tenHs = danhSachHS[maHs] ? danhSachHS[maHs].hoTen : 'Không rõ';
-                                const dvLop = danhSachHS[maHs] ? danhSachHS[maHs].dvLop : 'Không rõ'; // Lấy thông tin ĐV Lớp
+                                const dvLop = danhSachHS[maHs] ? danhSachHS[maHs].dvLop : 'Không rõ'; 
                                 const tenLop = maLop;
                                 const chuoiTrangThai = trangThai === 'vang' ? 'Vắng không phép' : 'Vắng có phép';
                                 
                                 const tr = document.createElement('tr');
-                                // Chèn thêm thẻ <td>${dvLop}</td>
-                                tr.innerHTML = `<td>${stt++}</td><td>${tenHs}</td><td>${dvLop}</td><td>${tenLop}</td><td style="color:${trangThai==='vang'?'red':'orange'}">${chuoiTrangThai}</td>`;
+                                tr.innerHTML = `<td></td><td>${tenHs}</td><td>${dvLop}</td><td>${tenLop}</td><td style="color:${trangThai==='vang'?'red':'orange'}">${chuoiTrangThai}</td>`;
                                 tbody.appendChild(tr);
                             }
                         }
                     }
-                    if(stt === 1) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Tất cả học sinh đi học đầy đủ.</td></tr>';
+                    if(!coHocSinhVang) {
+                        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Tất cả học sinh đi học đầy đủ.</td></tr>';
+                    } else {
+                        locDuLieuKhach(); // Gọi hàm lọc để đánh số thứ tự STT và áp dụng bộ lọc (nếu có)
+                    }
                 }).catch(error => {
                     tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">Lỗi tải dữ liệu học sinh.</td></tr>';
                 });
             }).catch(error => {
                 tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">Lỗi kết nối CSDL.</td></tr>';
             });
+        }
+
+        // CHỨC NĂNG LỌC DỮ LIỆU BẢNG KHÁCH
+        function locDuLieuKhach() {
+            const ten = document.getElementById('locTenKhach').value.toLowerCase();
+            const dvLop = document.getElementById('locDVLopKhach').value.toLowerCase();
+            const lop = document.getElementById('locLopHocKhach').value.toLowerCase();
+            const tt = document.getElementById('locTinhTrangKhach').value;
+            
+            const rows = document.getElementById('duLieuVangKhach').getElementsByTagName('tr');
+            
+            // Bỏ qua nếu dòng đầu tiên là thông báo (colspan = 5)
+            if (rows.length === 1 && rows[0].cells.length === 1) return;
+
+            let stt = 1;
+            for (let i = 0; i < rows.length; i++) {
+                const cells = rows[i].cells;
+                if (cells.length === 5) {
+                    const txtTen = cells[1].textContent.toLowerCase();
+                    const txtDVLop = cells[2].textContent.toLowerCase();
+                    const txtLop = cells[3].textContent.toLowerCase();
+                    const txtTT = cells[4].textContent;
+
+                    const matchTen = txtTen.includes(ten);
+                    const matchDVLop = txtDVLop.includes(dvLop);
+                    const matchLop = txtLop.includes(lop);
+                    const matchTT = tt === "" || txtTT === tt;
+
+                    if (matchTen && matchDVLop && matchLop && matchTT) {
+                        rows[i].style.display = "";
+                        cells[0].textContent = stt++; // Cập nhật lại STT cho các dòng hiển thị
+                    } else {
+                        rows[i].style.display = "none";
+                    }
+                }
+            }
         }
 
         function kiemTraGiaoDienAdmin() {
