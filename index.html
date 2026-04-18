@@ -61,7 +61,7 @@
                     <tr>
                         <th>STT</th>
                         <th>Họ Tên Học Sinh</th>
-                        <th>Lớp Đang Học</th>
+                        <th>ĐV Lớp</th> <th>Lớp Đang Học</th>
                         <th>Tình Trạng</th>
                     </tr>
                 </thead>
@@ -146,7 +146,7 @@
                         <tr>
                             <th>STT</th>
                             <th>Họ Tên Học Sinh</th>
-                            <th>Lớp ĐV</th>
+                            <th>ĐV Lớp</th>
                             <th class="checkbox-cell">Vắng</th>
                             <th class="checkbox-cell">Vắng Phép</th>
                         </tr>
@@ -215,12 +215,12 @@
         function taiDanhSachVangKhach() {
             const ngay = document.getElementById('ngayXemKhach').value;
             const tbody = document.getElementById('duLieuVangKhach');
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Đang tải...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Đang tải...</td></tr>';
 
             dataBase.ref('diemDanh/' + ngay).once('value').then(snap => {
                 tbody.innerHTML = '';
                 if(!snap.exists()) {
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Không có dữ liệu điểm danh vắng ngày này.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Không có dữ liệu điểm danh vắng ngày này.</td></tr>';
                     return;
                 }
                 let stt = 1;
@@ -233,21 +233,23 @@
                             const trangThai = duLieuNgay[maLop][maHs];
                             if(trangThai === 'vang' || trangThai === 'vang_phep') {
                                 const tenHs = danhSachHS[maHs] ? danhSachHS[maHs].hoTen : 'Không rõ';
+                                const dvLop = danhSachHS[maHs] ? danhSachHS[maHs].dvLop : 'Không rõ'; // Lấy thông tin ĐV Lớp
                                 const tenLop = maLop;
                                 const chuoiTrangThai = trangThai === 'vang' ? 'Vắng không phép' : 'Vắng có phép';
                                 
                                 const tr = document.createElement('tr');
-                                tr.innerHTML = `<td>${stt++}</td><td>${tenHs}</td><td>${tenLop}</td><td style="color:${trangThai==='vang'?'red':'orange'}">${chuoiTrangThai}</td>`;
+                                // Chèn thêm thẻ <td>${dvLop}</td>
+                                tr.innerHTML = `<td>${stt++}</td><td>${tenHs}</td><td>${dvLop}</td><td>${tenLop}</td><td style="color:${trangThai==='vang'?'red':'orange'}">${chuoiTrangThai}</td>`;
                                 tbody.appendChild(tr);
                             }
                         }
                     }
-                    if(stt === 1) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Tất cả học sinh đi học đầy đủ.</td></tr>';
+                    if(stt === 1) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Tất cả học sinh đi học đầy đủ.</td></tr>';
                 }).catch(error => {
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Lỗi tải dữ liệu học sinh.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">Lỗi tải dữ liệu học sinh.</td></tr>';
                 });
             }).catch(error => {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Lỗi kết nối CSDL.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">Lỗi kết nối CSDL.</td></tr>';
             });
         }
 
