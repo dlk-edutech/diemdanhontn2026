@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Điểm Danh Online</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f9; }
+        .header { background-color: #00468c; color: white; padding: 15px 20px; text-align: center; }
+        .header h1, .header h2, .header p { margin: 5px 0; }
+        .nav { display: flex; justify-content: center; background-color: #003366; padding: 10px; }
+        .nav button { background: none; border: none; color: white; padding: 10px 20px; cursor: pointer; font-size: 16px; }
+        .nav button:hover, .nav button.active { background-color: #005b9f; border-radius: 5px; }
+        .container { max-width: 1000px; margin: 20px auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .section { display: none; }
+        .section.active { display: block; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 5px; }
+        .form-group input, .form-group select { width: 100%; padding: 8px; box-sizing: border-box; }
+        .btn { background-color: #28a745; color: white; padding: 10px 15px; border: none; cursor: pointer; border-radius: 4px; }
+        .btn:hover { background-color: #218838; }
+        .btn-danger { background-color: #dc3545; }
+        .btn-danger:hover { background-color: #c82333; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        table, th, td { border: 1px solid #ddd; }
+        th, td { padding: 10px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .logout-btn { float: right; background-color: #dc3545; }
+        .checkbox-cell { text-align: center; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2 id="tenDonViHienThi">SỞ GIÁO DỤC VÀ ĐÀO TẠO</h2>
+        <h1 id="tenTruongHienThi">TRƯỜNG THPT SỐ 1 TRẦN PHÚ</h1>
+        <p id="thongBaoHienThi" style="color: #ffeb3b; font-style: italic;"></p>
+    </div>
+
+    <div class="nav" id="menuDieuHuong">
+        <button id="btnNavKhach" class="active" onclick="chuyenTab('khach')">Giao diện Khách</button>
+        <button id="btnNavAdmin" onclick="chuyenTab('admin')">Quản trị viên</button>
+        <button id="btnNavGiaoVien" onclick="chuyenTab('giaovien')">Giáo viên</button>
+    </div>
+
+    <div class="container">
+        <div id="vungKhach" class="section active">
+            <h3>Danh Sách Học Sinh Vắng</h3>
+            <div class="form-group">
+                <label>Chọn ngày:</label>
+                <input type="date" id="ngayXemKhach" onchange="taiDanhSachVangKhach()">
+            </div>
+            <table id="bangVangKhach">
+                <thead>
+                    <tr>
+                        <th>STT</th>
+                        <th>Họ Tên Học Sinh</th>
+                        <th>Lớp Đang Học</th>
+                        <th>Tình Trạng</th>
+                    </tr>
+                </thead>
+                <tbody id="duLieuVangKhach"></tbody>
+            </table>
+        </div>
+
+        <div id="vungAdmin" class="section">
+            <div id="dangNhapAdmin">
+                <h3>Đăng Nhập Quản Trị</h3>
+                <div class="form-group">
+                    <label>Mật khẩu:</label>
+                    <input type="password" id="matKhauAdmin">
+                </div>
+                <button class="btn" onclick="xuLyDangNhapAdmin()">Đăng nhập</button>
+            </div>
+            
+            <div id="bangDieuKhienAdmin" style="display: none;">
+                <button class="btn logout-btn" onclick="dangXuat()">Đăng xuất</button>
+                <h3>Bảng Điều Khiển Quản Trị</h3>
+                
+                <hr>
+                <h4>1. Đổi Mật Khẩu Admin</h4>
+                <div class="form-group">
+                    <input type="password" id="matKhauAdminMoi" placeholder="Mật khẩu mới">
+                </div>
+                <button class="btn" onclick="doiMatKhauAdmin()">Cập nhật mật khẩu</button>
+
+                <hr>
+                <h4>2. Cài Đặt Tiêu Đề</h4>
+                <div class="form-group"><input type="text" id="nhapDonVi" placeholder="Tên đơn vị chủ quản"></div>
+                <div class="form-group"><input type="text" id="nhapTenTruong" placeholder="Tên trường"></div>
+                <div class="form-group"><input type="text" id="nhapThongBao" placeholder="Thông báo chung"></div>
+                <button class="btn" onclick="capNhatTieuDe()">Lưu tiêu đề</button>
+
+                <hr>
+                <h4>3. Tải Lên Danh Sách Giáo Viên (Excel)</h4>
+                <p><i>Cột: Mã gv | Mật khẩu | Họ tên gv | Môn | Lớp</i></p>
+                <input type="file" id="fileGiaoVien" accept=".xlsx, .xls">
+                <button class="btn" onclick="taiLenGiaoVien()">Tải lên & Lưu</button>
+
+                <hr>
+                <h4>4. Tải Lên Danh Sách Học Sinh (Excel)</h4>
+                <p><i>Cột: HỌ TÊN HỌC SINH | ĐV LỚP | Học ở các lớp</i></p>
+                <input type="file" id="fileHocSinh" accept=".xlsx, .xls">
+                <button class="btn" onclick="taiLenHocSinh()">Tải lên & Lưu</button>
+
+                <hr>
+                <h4>5. Tải Báo Cáo Vắng Theo Ngày</h4>
+                <div class="form-group"><input type="date" id="ngayBaoCao"></div>
+                <button class="btn" onclick="xuatBaoCaoExcel()">Tải Báo Cáo (Excel)</button>
+            </div>
+        </div>
+
+        <div id="vungGiaoVien" class="section">
+            <div id="dangNhapGv">
+                <h3>Đăng Nhập Giáo Viên</h3>
+                <div class="form-group">
+                    <label>Mã Giáo Viên:</label>
+                    <input type="text" id="maGvDangNhap">
+                </div>
+                <div class="form-group">
+                    <label>Mật Khẩu:</label>
+                    <input type="password" id="matKhauGvDangNhap">
+                </div>
+                <button class="btn" onclick="xuLyDangNhapGv()">Đăng nhập</button>
+            </div>
+
+            <div id="bangDieuKhienGv" style="display: none;">
+                <button class="btn logout-btn" onclick="dangXuat()">Đăng xuất</button>
+                <h3 id="loiChaoGv">Chào Giáo Viên</h3>
+                
+                <hr>
+                <h4>1. Đổi Mật Khẩu</h4>
+                <div class="form-group"><input type="password" id="matKhauGvMoi" placeholder="Mật khẩu mới"></div>
+                <button class="btn" onclick="doiMatKhauGv()">Đổi mật khẩu</button>
+
+                <hr>
+                <h4>2 & 3. Điểm Danh Lớp Học</h4>
+                <div class="form-group">
+                    <label>Chọn lớp:</label>
+                    <select id="chonLopGv" onchange="taiDanhSachHocSinhDeDiemDanh()">
+                        <option value="">-- Chọn lớp --</option>
+                    </select>
+                </div>
+                <table id="bangDiemDanh">
+                    <thead>
+                        <tr>
+                            <th>STT</th>
+                            <th>Họ Tên Học Sinh</th>
+                            <th>Lớp ĐV</th>
+                            <th class="checkbox-cell">Vắng</th>
+                            <th class="checkbox-cell">Vắng Phép</th>
+                        </tr>
+                    </thead>
+                    <tbody id="duLieuDiemDanh"></tbody>
+                </table>
+                <br>
+                <button class="btn" onclick="luuDiemDanh()">Lưu Điểm Danh Hôm Nay</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // CẤU HÌNH FIREBASE - Đã cập nhật theo thông tin của thầy
+        const cauHinhFirebase = {
+            apiKey: "AIzaSyAcM1-P2_i-dw0z065jkKjKrRGp1ew9iSs",
+            authDomain: "diemdanh26.firebaseapp.com",
+            databaseURL: "https://diemdanh26-default-rtdb.firebaseio.com", // Thầy kiểm tra lại link này trên Firebase nếu không kết nối được nhé
+            projectId: "diemdanh26",
+            storageBucket: "diemdanh26.firebasestorage.app",
+            messagingSenderId: "71222508658",
+            appId: "1:71222508658:web:5b61d376b5f017c03b16eb"
+        };
+
+        // Khởi tạo Firebase
+        firebase.initializeApp(cauHinhFirebase);
+        const dataBase = firebase.database();
+
+        // Biến toàn cục quản lý phiên
+        let phienDangNhap = null; 
+        let loaiTaiKhoan = null; 
+        let duLieuHocSinhHienTai = {};
+
+        // Khởi tạo giao diện
+        window.onload = function() {
+            document.getElementById('ngayXemKhach').valueAsDate = new Date();
+            taiTieuDe();
+            taiDanhSachVangKhach();
+            taoMatKhauAdminMacDinh();
+        };
+
+        function taoMatKhauAdminMacDinh() {
+            dataBase.ref('heThong/admin').once('value').then(snapshot => {
+                if(!snapshot.exists()) {
+                    dataBase.ref('heThong/admin/matKhau').set('admin123');
+                }
+            });
+        }
+
+        function chuyenTab(tab) {
+            document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav button').forEach(el => el.classList.remove('active'));
+            
+            if(tab === 'khach') {
+                document.getElementById('vungKhach').classList.add('active');
+                document.getElementById('btnNavKhach').classList.add('active');
+                taiDanhSachVangKhach();
+            } else if(tab === 'admin') {
+                document.getElementById('vungAdmin').classList.add('active');
+                document.getElementById('btnNavAdmin').classList.add('active');
+                kiemTraGiaoDienAdmin();
+            } else if(tab === 'giaovien') {
+                document.getElementById('vungGiaoVien').classList.add('active');
+                document.getElementById('btnNavGiaoVien').classList.add('active');
+                kiemTraGiaoDienGv();
+            }
+        }
+
+        // --- CÁC HÀM GIAO DIỆN KHÁCH ---
+        function taiDanhSachVangKhach() {
+            const ngay = document.getElementById('ngayXemKhach').value;
+            const tbody = document.getElementById('duLieuVangKhach');
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Đang tải...</td></tr>';
+
+            dataBase.ref('diemDanh/' + ngay).once('value').then(snap => {
+                tbody.innerHTML = '';
+                if(!snap.exists()) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Không có dữ liệu điểm danh vắng ngày này.</td></tr>';
+                    return;
+                }
+                let stt = 1;
+                const duLieuNgay = snap.val();
+                
+                dataBase.ref('hocSinh').once('value').then(hsSnap => {
+                    const danhSachHS = hsSnap.val() || {};
+                    for(let maLop in duLieuNgay) {
+                        for(let maHs in duLieuNgay[maLop]) {
+                            const trangThai = duLieuNgay[maLop][maHs];
+                            if(trangThai === 'vang' || trangThai === 'vang_phep') {
+                                const tenHs = danhSachHS[maHs] ? danhSachHS[maHs].hoTen : 'Không rõ';
+                                const tenLop = maLop;
+                                const chuoiTrangThai = trangThai === 'vang' ? 'Vắng không phép' : 'Vắng có phép';
+                                
+                                const tr = document.createElement('tr');
+                                tr.innerHTML = `<td>${stt++}</td><td>${tenHs}</td><td>${tenLop}</td><td style="color:${trangThai==='vang'?'red':'orange'}">${chuoiTrangThai}</td>`;
+                                tbody.appendChild(tr);
+                            }
+                        }
+                    }
+                    if(stt === 1) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Tất cả học sinh đi học đầy đủ.</td></tr>';
+                }).catch(error => {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Lỗi kết nối CSDL: Vui lòng kiểm tra Rules trên Firebase.</td></tr>';
+                    console.error("Lỗi tải học sinh:", error);
+                });
+            }).catch(error => {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Lỗi kết nối CSDL: Vui lòng kiểm tra Rules trên Firebase.</td></tr>';
+                console.error("Lỗi tải điểm danh:", error);
+            });
+        }
+
+        // --- CÁC HÀM QUẢN TRỊ ADMIN ---
+        function kiemTraGiaoDienAdmin() {
+            if(loaiTaiKhoan === 'admin') {
+                document.getElementById('dangNhapAdmin').style.display = 'none';
+                document.getElementById('bangDieuKhienAdmin').style.display = 'block';
+                document.getElementById('ngayBaoCao').valueAsDate = new Date();
+            } else {
+                document.getElementById('dangNhapAdmin').style.display = 'block';
+                document.getElementById('bangDieuKhienAdmin').style.display = 'none';
+            }
+        }
+
+        function xuLyDangNhapAdmin() {
+            const mk = document.getElementById('matKhauAdmin').value;
+            dataBase.ref('heThong/admin/matKhau').once('value').then(snap => {
+                if(snap.val() === mk || mk === 'admin123') { // admin123 là backup cứng trong code phòng khi mất db
+                    loaiTaiKhoan = 'admin';
+                    kiemTraGiaoDienAdmin();
+                    document.getElementById('matKhauAdmin').value = '';
+                } else {
+                    alert('Sai mật khẩu quản trị!');
+                }
+            }).catch(err => alert("Lỗi kết nối database. Hãy chắc chắn thầy đã đổi Rules trên Firebase thành true."));
+        }
+
+        function doiMatKhauAdmin() {
+            const mkMoi = document.getElementById('matKhauAdminMoi').value;
+            if(!mkMoi) return alert('Vui lòng nhập mật khẩu mới');
+            dataBase.ref('heThong/admin/matKhau').set(mkMoi).then(() => {
+                alert('Đổi mật khẩu thành công!');
+                document.getElementById('matKhauAdminMoi').value = '';
+            });
+        }
+
+        function taiTieuDe() {
+            dataBase.ref('heThong/caiDat').once('value').then(snap => {
+                const duLieu = snap.val() || { donVi: "SỞ GIÁO DỤC VÀ ĐÀO TẠO", tenTruong: "TRƯỜNG THPT SỐ 1 TRẦN PHÚ", thongBao: "" };
+                document.getElementById('tenDonViHienThi').innerText = duLieu.donVi;
+                document.getElementById('tenTruongHienThi').innerText = duLieu.tenTruong;
+                document.getElementById('thongBaoHienThi').innerText = duLieu.thongBao;
+                
+                document.getElementById('nhapDonVi').value = duLieu.donVi;
+                document.getElementById('nhapTenTruong').value = duLieu.tenTruong;
+                document.getElementById('nhapThongBao').value = duLieu.thongBao;
+            });
+        }
+
+        function capNhatTieuDe() {
+            const data = {
+                donVi: document.getElementById('nhapDonVi').value.toUpperCase(),
+                tenTruong: document.getElementById('nhapTenTruong').value.toUpperCase(),
+                thongBao: document.getElementById('nhapThongBao').value
+            };
+            dataBase.ref('heThong/caiDat').set(data).then(() => {
+                alert('Đã lưu thông tin tiêu đề!');
+                taiTieuDe();
+            });
+        }
+
+        function taiLenGiaoVien() {
+            const file = document.getElementById('fileGiaoVien').files[0];
+            if(!file) return alert("Vui lòng chọn file Excel");
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const json = XLSX.utils.sheet_to_json(sheet);
+                
+                const duLieuLuu = {};
+                json.forEach(row => {
+                    const ma = row['Mã gv'];
+                    if(ma) {
+                        duLieuLuu[ma] = {
+                            matKhau: row['Mật khẩu'].toString(),
+                            hoTen: row['Họ tên gv'],
+                            mon: row['Môn'],
+                            cacLop: row['Lớp'] ? row['Lớp'].toString().split(',').map(s=>s.trim()) : []
+                        };
+                    }
+                });
+                dataBase.ref('giaoVien').set(duLieuLuu).then(() => alert('Tải lên danh sách Giáo Viên thành công!'));
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function taiLenHocSinh() {
+            const file = document.getElementById('fileHocSinh').files[0];
+            if(!file) return alert("Vui lòng chọn file Excel");
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const json = XLSX.utils.sheet_to_json(sheet);
+                
+                const duLieuLuu = {};
+                json.forEach((row, index) => {
+                    const hoTen = row['HỌ TÊN HỌC SINH'];
+                    if(hoTen) {
+                        const maHs = "HS" + (index + 1); 
+                        duLieuLuu[maHs] = {
+                            hoTen: hoTen,
+                            dvLop: row['ĐV LỚP'],
+                            cacLop: row['Học ở các lớp'] ? row['Học ở các lớp'].toString().split(',').map(s=>s.trim()) : []
+                        };
+                    }
+                });
+                dataBase.ref('hocSinh').set(duLieuLuu).then(() => alert('Tải lên danh sách Học Sinh thành công!'));
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function xuatBaoCaoExcel() {
+            const ngay = document.getElementById('ngayBaoCao').value;
+            if(!ngay) return alert("Vui lòng chọn ngày cần xuất báo cáo");
+            
+            Promise.all([
+                dataBase.ref('diemDanh/' + ngay).once('value'),
+                dataBase.ref('hocSinh').once('value')
+            ]).then(snaps => {
+                const duLieuDiemDanh = snaps[0].val();
+                const duLieuHocSinh = snaps[1].val() || {};
+                
+                if(!duLieuDiemDanh) return alert("Không có dữ liệu vắng trong ngày này.");
+
+                const mangBaoCao = [];
+                for(let maLop in duLieuDiemDanh) {
+                    for(let maHs in duLieuDiemDanh[maLop]) {
+                        const trangThai = duLieuDiemDanh[maLop][maHs];
+                        if(trangThai === 'vang' || trangThai === 'vang_phep') {
+                            mangBaoCao.push({
+                                "Ngày": ngay,
+                                "Họ và Tên": duLieuHocSinh[maHs] ? duLieuHocSinh[maHs].hoTen : 'Không rõ',
+                                "Lớp": maLop,
+                                "Trạng thái": trangThai === 'vang' ? 'Vắng không phép' : 'Vắng có phép'
+                            });
+                        }
+                    }
+                }
+
+                if(mangBaoCao.length === 0) return alert("Không có học sinh nào vắng trong ngày này.");
+
+                const ws = XLSX.utils.json_to_sheet(mangBaoCao);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "BaoCaoVang");
+                XLSX.writeFile(wb, `Bao_Cao_Vang_${ngay}.xlsx`);
+            });
+        }
+
+        // --- CÁC HÀM GIÁO VIÊN ---
+        function kiemTraGiaoDienGv() {
+            if(loaiTaiKhoan === 'giaovien' && phienDangNhap) {
+                document.getElementById('dangNhapGv').style.display = 'none';
+                document.getElementById('bangDieuKhienGv').style.display = 'block';
+                taiThongTinGiaoVien();
+            } else {
+                document.getElementById('dangNhapGv').style.display = 'block';
+                document.getElementById('bangDieuKhienGv').style.display = 'none';
+            }
+        }
+
+        function xuLyDangNhapGv() {
+            const ma = document.getElementById('maGvDangNhap').value.trim();
+            const mk = document.getElementById('matKhauGvDangNhap').value;
+            
+            dataBase.ref('giaoVien/' + ma).once('value').then(snap => {
+                if(snap.exists() && snap.val().matKhau === mk) {
+                    loaiTaiKhoan = 'giaovien';
+                    phienDangNhap = ma;
+                    kiemTraGiaoDienGv();
+                    document.getElementById('maGvDangNhap').value = '';
+                    document.getElementById('matKhauGvDangNhap').value = '';
+                } else {
+                    alert('Sai Mã giáo viên hoặc Mật khẩu!');
+                }
+            });
+        }
+
+        function doiMatKhauGv() {
+            const mkMoi = document.getElementById('matKhauGvMoi').value;
+            if(!mkMoi) return alert('Vui lòng nhập mật khẩu mới');
+            dataBase.ref(`giaoVien/${phienDangNhap}/matKhau`).set(mkMoi).then(() => {
+                alert('Đổi mật khẩu thành công!');
+                document.getElementById('matKhauGvMoi').value = '';
+            });
+        }
+
+        function taiThongTinGiaoVien() {
+            dataBase.ref('giaoVien/' + phienDangNhap).once('value').then(snap => {
+                const gv = snap.val();
+                document.getElementById('loiChaoGv').innerText = `Chào thầy/cô: ${gv.hoTen} (${gv.mon})`;
+                
+                const selectLop = document.getElementById('chonLopGv');
+                selectLop.innerHTML = '<option value="">-- Chọn lớp --</option>';
+                if(gv.cacLop) {
+                    gv.cacLop.forEach(lop => {
+                        const opt = document.createElement('option');
+                        opt.value = lop;
+                        opt.innerText = lop;
+                        selectLop.appendChild(opt);
+                    });
+                }
+            });
+        }
+
+        function taiDanhSachHocSinhDeDiemDanh() {
+            const lopChon = document.getElementById('chonLopGv').value;
+            const tbody = document.getElementById('duLieuDiemDanh');
+            tbody.innerHTML = '';
+            duLieuHocSinhHienTai = {};
+
+            if(!lopChon) return;
+
+            const ngayHienTai = new Date().toISOString().split('T')[0];
+
+            Promise.all([
+                dataBase.ref('hocSinh').once('value'),
+                dataBase.ref(`diemDanh/${ngayHienTai}/${lopChon}`).once('value')
+            ]).then(snaps => {
+                const tatCaHS = snaps[0].val() || {};
+                const diemDanhCu = snaps[1].val() || {};
+                
+                let stt = 1;
+                for(let maHs in tatCaHS) {
+                    const hs = tatCaHS[maHs];
+                    if(hs.cacLop && hs.cacLop.includes(lopChon)) {
+                        duLieuHocSinhHienTai[maHs] = hs;
+                        
+                        const tr = document.createElement('tr');
+                        const checkVang = diemDanhCu[maHs] === 'vang' ? 'checked' : '';
+                        const checkVangPhep = diemDanhCu[maHs] === 'vang_phep' ? 'checked' : '';
+
+                        tr.innerHTML = `
+                            <td>${stt++}</td>
+                            <td>${hs.hoTen}</td>
+                            <td>${hs.dvLop}</td>
+                            <td class="checkbox-cell"><input type="radio" name="trangthai_${maHs}" value="vang" ${checkVang}></td>
+                            <td class="checkbox-cell"><input type="radio" name="trangthai_${maHs}" value="vang_phep" ${checkVangPhep}></td>
+                            <td class="checkbox-cell" style="display:none;"><input type="radio" name="trangthai_${maHs}" value="co_mat" ${(!checkVang && !checkVangPhep) ? 'checked' : ''}></td>
+                        `;
+                        tbody.appendChild(tr);
+                    }
+                }
+            });
+        }
+
+        function luuDiemDanh() {
+            const lopChon = document.getElementById('chonLopGv').value;
+            if(!lopChon) return alert("Vui lòng chọn lớp để điểm danh");
+            
+            const ngayHienTai = new Date().toISOString().split('T')[0];
+            const duLieuLuu = {};
+            
+            for(let maHs in duLieuHocSinhHienTai) {
+                const radios = document.getElementsByName(`trangthai_${maHs}`);
+                let giaTri = 'co_mat';
+                for(let i=0; i<radios.length; i++) {
+                    if(radios[i].checked) giaTri = radios[i].value;
+                }
+                if(giaTri !== 'co_mat') {
+                    duLieuLuu[maHs] = giaTri;
+                }
+            }
+
+            dataBase.ref(`diemDanh/${ngayHienTai}/${lopChon}`).set(duLieuLuu).then(() => {
+                alert(`Đã lưu điểm danh lớp ${lopChon} ngày ${ngayHienTai}`);
+            });
+        }
+
+        // --- CÁC HÀM CHUNG ---
+        function dangXuat() {
+            loaiTaiKhoan = null;
+            phienDangNhap = null;
+            chuyenTab('khach');
+        }
+    </script>
+</body>
+</html>
