@@ -163,7 +163,7 @@
     </div>
 
     <script>
-        // CẤU HÌNH FIREBASE - Đã cập nhật chính xác link Châu Á của thầy
+        // CẤU HÌNH FIREBASE - Giữ nguyên link Châu Á của thầy
         const cauHinhFirebase = {
             apiKey: "AIzaSyAcM1-P2_i-dw0z065jkKjKrRGp1ew9iSs",
             authDomain: "diemdanh26.firebaseapp.com",
@@ -472,11 +472,13 @@
 
             if(!lopChon) return;
 
+            // XỬ LÝ LỖI Ở ĐÂY: Ép chuỗi tên lớp về in hoa để so sánh chính xác
+            const lopChonHoa = lopChon.toUpperCase(); 
             const ngayHienTai = new Date().toISOString().split('T')[0];
 
             Promise.all([
                 dataBase.ref('hocSinh').once('value'),
-                dataBase.ref(`diemDanh/${ngayHienTai}/${lopChon}`).once('value')
+                dataBase.ref(`diemDanh/${ngayHienTai}/${lopChonHoa}`).once('value')
             ]).then(snaps => {
                 const tatCaHS = snaps[0].val() || {};
                 const diemDanhCu = snaps[1].val() || {};
@@ -484,7 +486,10 @@
                 let stt = 1;
                 for(let maHs in tatCaHS) {
                     const hs = tatCaHS[maHs];
-                    if(hs.cacLop && hs.cacLop.includes(lopChon)) {
+                    // Chuyển danh sách lớp của học sinh thành in hoa toàn bộ
+                    const cacLopHsHoa = hs.cacLop ? hs.cacLop.map(l => l.toUpperCase()) : [];
+
+                    if(cacLopHsHoa.includes(lopChonHoa)) {
                         duLieuHocSinhHienTai[maHs] = hs;
                         
                         const tr = document.createElement('tr');
@@ -509,6 +514,8 @@
             const lopChon = document.getElementById('chonLopGv').value;
             if(!lopChon) return alert("Vui lòng chọn lớp để điểm danh");
             
+            // XỬ LÝ LỖI Ở ĐÂY: Lưu cấu trúc trên Firebase đồng nhất là in hoa
+            const lopChonHoa = lopChon.toUpperCase();
             const ngayHienTai = new Date().toISOString().split('T')[0];
             const duLieuLuu = {};
             
@@ -523,7 +530,7 @@
                 }
             }
 
-            dataBase.ref(`diemDanh/${ngayHienTai}/${lopChon}`).set(duLieuLuu).then(() => {
+            dataBase.ref(`diemDanh/${ngayHienTai}/${lopChonHoa}`).set(duLieuLuu).then(() => {
                 alert(`Đã lưu điểm danh lớp ${lopChon} ngày ${ngayHienTai}`);
             });
         }
