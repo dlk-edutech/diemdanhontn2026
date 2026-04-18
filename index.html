@@ -30,6 +30,9 @@
         th { background-color: #f2f2f2; }
         .logout-btn { float: right; background-color: #dc3545; }
         .checkbox-cell { text-align: center; }
+        
+        /* Chỉnh nút checkbox to ra một chút để dễ bấm trên điện thoại */
+        input[type="checkbox"] { transform: scale(1.3); cursor: pointer; }
     </style>
 </head>
 <body>
@@ -163,7 +166,7 @@
     </div>
 
     <script>
-        // CẤU HÌNH FIREBASE - Giữ nguyên link Châu Á của thầy
+        // CẤU HÌNH FIREBASE
         const cauHinhFirebase = {
             apiKey: "AIzaSyAcM1-P2_i-dw0z065jkKjKrRGp1ew9iSs",
             authDomain: "diemdanh26.firebaseapp.com",
@@ -464,6 +467,13 @@
             });
         }
 
+        // Hàm hỗ trợ: Khi chọn 1 ô thì tự động bỏ chọn ô kia cùng hàng
+        function xuLyChonO(checkboxHienTai, idOPhiaBenKia) {
+            if (checkboxHienTai.checked) {
+                document.getElementById(idOPhiaBenKia).checked = false;
+            }
+        }
+
         function taiDanhSachHocSinhDeDiemDanh() {
             const lopChon = document.getElementById('chonLopGv').value;
             const tbody = document.getElementById('duLieuDiemDanh');
@@ -472,7 +482,6 @@
 
             if(!lopChon) return;
 
-            // XỬ LÝ LỖI Ở ĐÂY: Ép chuỗi tên lớp về in hoa để so sánh chính xác
             const lopChonHoa = lopChon.toUpperCase(); 
             const ngayHienTai = new Date().toISOString().split('T')[0];
 
@@ -486,7 +495,6 @@
                 let stt = 1;
                 for(let maHs in tatCaHS) {
                     const hs = tatCaHS[maHs];
-                    // Chuyển danh sách lớp của học sinh thành in hoa toàn bộ
                     const cacLopHsHoa = hs.cacLop ? hs.cacLop.map(l => l.toUpperCase()) : [];
 
                     if(cacLopHsHoa.includes(lopChonHoa)) {
@@ -500,9 +508,12 @@
                             <td>${stt++}</td>
                             <td>${hs.hoTen}</td>
                             <td>${hs.dvLop}</td>
-                            <td class="checkbox-cell"><input type="radio" name="trangthai_${maHs}" value="vang" ${checkVang}></td>
-                            <td class="checkbox-cell"><input type="radio" name="trangthai_${maHs}" value="vang_phep" ${checkVangPhep}></td>
-                            <td class="checkbox-cell" style="display:none;"><input type="radio" name="trangthai_${maHs}" value="co_mat" ${(!checkVang && !checkVangPhep) ? 'checked' : ''}></td>
+                            <td class="checkbox-cell">
+                                <input type="checkbox" id="vang_${maHs}" value="vang" ${checkVang} onchange="xuLyChonO(this, 'vangphep_${maHs}')">
+                            </td>
+                            <td class="checkbox-cell">
+                                <input type="checkbox" id="vangphep_${maHs}" value="vang_phep" ${checkVangPhep} onchange="xuLyChonO(this, 'vang_${maHs}')">
+                            </td>
                         `;
                         tbody.appendChild(tr);
                     }
@@ -514,17 +525,22 @@
             const lopChon = document.getElementById('chonLopGv').value;
             if(!lopChon) return alert("Vui lòng chọn lớp để điểm danh");
             
-            // XỬ LÝ LỖI Ở ĐÂY: Lưu cấu trúc trên Firebase đồng nhất là in hoa
             const lopChonHoa = lopChon.toUpperCase();
             const ngayHienTai = new Date().toISOString().split('T')[0];
             const duLieuLuu = {};
             
             for(let maHs in duLieuHocSinhHienTai) {
-                const radios = document.getElementsByName(`trangthai_${maHs}`);
+                // Đọc trạng thái từ id của checkbox thay vì name
+                const cbVang = document.getElementById(`vang_${maHs}`);
+                const cbVangPhep = document.getElementById(`vangphep_${maHs}`);
+                
                 let giaTri = 'co_mat';
-                for(let i=0; i<radios.length; i++) {
-                    if(radios[i].checked) giaTri = radios[i].value;
+                if (cbVang && cbVang.checked) {
+                    giaTri = 'vang';
+                } else if (cbVangPhep && cbVangPhep.checked) {
+                    giaTri = 'vang_phep';
                 }
+                
                 if(giaTri !== 'co_mat') {
                     duLieuLuu[maHs] = giaTri;
                 }
