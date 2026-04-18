@@ -101,13 +101,13 @@
                 <h4>3. Tải Lên Danh Sách Giáo Viên (Excel)</h4>
                 <p><i>Cột: Mã gv | Mật khẩu | Họ tên gv | Môn | Lớp</i></p>
                 <input type="file" id="fileGiaoVien" accept=".xlsx, .xls">
-                <button class="btn" onclick="taiLenGiaoVien()">Tải lên & Lưu</button>
+                <button class="btn" onclick="taiLenGiaoVien()">Tải lên & Lưu đè dữ liệu mới</button>
 
                 <hr>
                 <h4>4. Tải Lên Danh Sách Học Sinh (Excel)</h4>
                 <p><i>Cột: HỌ TÊN HỌC SINH | ĐV LỚP | Học ở các lớp</i></p>
                 <input type="file" id="fileHocSinh" accept=".xlsx, .xls">
-                <button class="btn" onclick="taiLenHocSinh()">Tải lên & Lưu</button>
+                <button class="btn" onclick="taiLenHocSinh()">Tải lên & Lưu đè dữ liệu mới</button>
 
                 <hr>
                 <h4>5. Tải Báo Cáo Vắng Theo Ngày</h4>
@@ -323,6 +323,9 @@
         function taiLenGiaoVien() {
             const file = document.getElementById('fileGiaoVien').files[0];
             if(!file) return alert("Vui lòng chọn file Excel");
+            
+            if(!confirm("Bạn có chắc chắn muốn XÓA TOÀN BỘ danh sách giáo viên cũ và tải lên dữ liệu mới không?")) return;
+
             const reader = new FileReader();
             reader.onload = function(e) {
                 const data = new Uint8Array(e.target.result);
@@ -332,7 +335,8 @@
                 
                 const duLieuLuu = {};
                 json.forEach(row => {
-                    const ma = row['Mã gv'];
+                    // CHỈNH SỬA: Ép mã giáo viên thành in hoa để không phân biệt hoa thường khi đăng nhập
+                    const ma = row['Mã gv'] ? row['Mã gv'].toString().trim().toUpperCase() : null;
                     if(ma) {
                         duLieuLuu[ma] = {
                             matKhau: row['Mật khẩu'] ? row['Mật khẩu'].toString() : "1111",
@@ -342,7 +346,14 @@
                         };
                     }
                 });
-                dataBase.ref('giaoVien').set(duLieuLuu).then(() => alert('Tải lên danh sách Giáo Viên thành công!'));
+                
+                // CHỈNH SỬA: Xóa dữ liệu cũ rồi mới ghi đè dữ liệu mới
+                dataBase.ref('giaoVien').remove().then(() => {
+                    dataBase.ref('giaoVien').set(duLieuLuu).then(() => {
+                        alert('Đã xóa dữ liệu cũ và tải lên danh sách Giáo Viên mới thành công!');
+                        document.getElementById('fileGiaoVien').value = '';
+                    });
+                });
             };
             reader.readAsArrayBuffer(file);
         }
@@ -350,6 +361,9 @@
         function taiLenHocSinh() {
             const file = document.getElementById('fileHocSinh').files[0];
             if(!file) return alert("Vui lòng chọn file Excel");
+            
+            if(!confirm("Bạn có chắc chắn muốn XÓA TOÀN BỘ danh sách học sinh cũ và tải lên dữ liệu mới không?")) return;
+
             const reader = new FileReader();
             reader.onload = function(e) {
                 const data = new Uint8Array(e.target.result);
@@ -369,7 +383,14 @@
                         };
                     }
                 });
-                dataBase.ref('hocSinh').set(duLieuLuu).then(() => alert('Tải lên danh sách Học Sinh thành công!'));
+                
+                // CHỈNH SỬA: Xóa dữ liệu cũ rồi mới ghi đè dữ liệu mới
+                dataBase.ref('hocSinh').remove().then(() => {
+                    dataBase.ref('hocSinh').set(duLieuLuu).then(() => {
+                        alert('Đã xóa dữ liệu cũ và tải lên danh sách Học Sinh mới thành công!');
+                        document.getElementById('fileHocSinh').value = '';
+                    });
+                });
             };
             reader.readAsArrayBuffer(file);
         }
@@ -424,7 +445,8 @@
         }
 
         function xuLyDangNhapGv() {
-            const ma = document.getElementById('maGvDangNhap').value.trim();
+            // CHỈNH SỬA: Tự động chuyển mã nhập vào thành chữ in hoa
+            const ma = document.getElementById('maGvDangNhap').value.trim().toUpperCase();
             const mk = document.getElementById('matKhauGvDangNhap').value;
             
             dataBase.ref('giaoVien/' + ma).once('value').then(snap => {
@@ -530,7 +552,6 @@
             const duLieuLuu = {};
             
             for(let maHs in duLieuHocSinhHienTai) {
-                // Đọc trạng thái từ id của checkbox thay vì name
                 const cbVang = document.getElementById(`vang_${maHs}`);
                 const cbVangPhep = document.getElementById(`vangphep_${maHs}`);
                 
